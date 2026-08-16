@@ -101,8 +101,13 @@ async function onClick(e) {
   }
   const promote = e.target.closest('[data-promote]');
   if (promote) {
-    await run('taskPromote', { task_id: promote.dataset.promote, intervalDays: Number(promote.dataset.interval) });
-    toast('Now recurring');
-    await refresh();
+    try {
+      await run('taskPromote', { task_id: promote.dataset.promote, intervalDays: Number(promote.dataset.interval) });
+      toast('Now recurring');
+      await refresh();
+    } catch (err) {
+      toast('Could not make it recurring — ' + err.message, 'bad');
+    }
+    return;
   }
 }

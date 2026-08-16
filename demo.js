@@ -58,5 +58,16 @@ export async function demoRun(method, params, state) {
       person_id: params.person_id, completed_at: cache.todayISO, source: 'projects' });
     return { step: s };
   }
-  return { ok: true };
+  if (method === 'taskPromote') {
+    const t = cache.tasks.find(x => x.id === params.task_id);
+    if (!t) throw new Error('taskPromote: no task ' + params.task_id);
+    t.recurrence_type = 'completion';
+    t.recurrence_rule = { intervalDays: params.intervalDays };
+    return t;
+  }
+  // Anything the real backend exposes that demo mode hasn't implemented yet
+  // must fail loudly rather than a blanket { ok: true } — a demo backend that
+  // always claims success is exactly how the missing taskPromote branch above
+  // hid: the UI toasted "Now recurring" while nothing had actually changed.
+  throw new Error(`demoRun: "${method}" is not implemented in demo mode`);
 }
