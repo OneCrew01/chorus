@@ -42,7 +42,8 @@ async function onClick(e) {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const front = document.querySelector('.dk--front');
-  if (!front) return;
+  if (!front || front.dataset.busy) return;   // a second tap during the swipe-out must not write again
+  front.dataset.busy = '1';
   const id = front.dataset.task;
   front.classList.add(b.dataset.act === 'done' ? 'dk--out-right' : 'dk--out-left');
   try {
@@ -51,6 +52,7 @@ async function onClick(e) {
     setTimeout(refresh, 220);
   } catch {
     front.classList.remove('dk--out-right', 'dk--out-left');
+    delete front.dataset.busy;                 // let them retry after a failure
     toast('Could not save — try again', 'bad');
   }
 }
