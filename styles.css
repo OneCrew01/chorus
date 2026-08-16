@@ -204,3 +204,310 @@ button, input {
   color: var(--text);
   font-size: 14px;
 }
+
+/* --- Momentum view --- */
+
+.hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 16px 16px 0;
+}
+
+.hd b {
+  font-size: 20px;
+}
+
+.hd span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+section {
+  padding: 0 16px 22px;
+}
+
+.lab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+
+.add {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* The month ring — the visual anchor of this screen. It measures PACE, not a
+   completion ratio; see lib/pace.js. The empty case ('—') must never be styled
+   to look like a real percentage. */
+
+.ring {
+  display: grid;
+  grid-template-columns: 126px;
+  justify-items: center;
+  row-gap: 6px;
+  margin: 20px auto 8px;
+}
+
+.ring > svg {
+  grid-row: 1;
+  grid-column: 1;
+  transform: rotate(-90deg);
+}
+
+.ring__track {
+  fill: none;
+  stroke: var(--hairline);
+  stroke-width: 10;
+}
+
+.ring__fill {
+  fill: none;
+  stroke: var(--ring-a);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .3s ease;
+}
+
+.ring__mid {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring__mid b {
+  font-size: 30px;
+}
+
+.ring__mid span {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.ring__pace {
+  grid-row: 2;
+  grid-column: 1;
+  margin: 0;
+  font-size: 13px;
+}
+
+.ring__pace.is-ahead {
+  color: var(--success);
+}
+
+.ring__pace.is-behind {
+  color: var(--error);
+}
+
+.ring.ring--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 170px;
+  padding: 20px 0;
+}
+
+.ring--empty b {
+  font-size: 34px;
+  color: var(--muted);
+}
+
+.ring--empty span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* --- The crew --- */
+
+.crew {
+  display: flex;
+  gap: 12px;
+}
+
+.crew__p {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+.crew__p b {
+  font-size: 18px;
+}
+
+.crew__p span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Shared thin progress bar — reused by the crew and by project cards. */
+
+.bar {
+  display: block;
+  width: 100%;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--hairline);
+  overflow: hidden;
+}
+
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ring-a);
+}
+
+.bar--warm > i {
+  background: var(--accent-warm);
+}
+
+/* --- Projects --- */
+
+.prj {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.prj__t {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.prj__t em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent-warm);
+}
+
+.prj__s {
+  display: block;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --- Chores / one-offs rows --- */
+
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.row--done .row__t {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.row--done .row__m {
+  opacity: .6;
+}
+
+.ck {
+  grid-row: 1 / 3;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  position: relative;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ck--on {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.ck--on::after {
+  content: '\2713';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--bg);
+}
+
+.row__t {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: 15px;
+}
+
+.row__m {
+  grid-row: 2;
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.promote {
+  grid-row: 1 / 3;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent-warm);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.row--ghost {
+  display: block;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 12px 0 0;
+  border: none;
+  border-top: 1px dashed var(--hairline);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
