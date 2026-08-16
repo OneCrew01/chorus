@@ -28,7 +28,14 @@ export async function run(method, params = {}) {
     body: JSON.stringify({ method, params, pin: localStorage.getItem('ch_pin') || '' })
   });
   const json = await res.json();
-  if (!json.ok) throw new Error(json.error.message);
+  if (!json.ok) {
+    // Carry the backend's error code (e.g. PHOTO_TOO_LARGE) on the thrown
+    // Error so a caller that cares can branch on it. Every existing call
+    // site only ever reads .message, so this is additive.
+    const err = new Error(json.error.message);
+    err.code = json.error.code;
+    throw err;
+  }
   return json.data;
 }
 

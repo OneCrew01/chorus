@@ -127,30 +127,63 @@ async function onSubmit(e) {
   }
 }
 
+const PHOTO_MAX_EDGE = 1600;
+
+// A phone photo is 3-12MB; base64 inflates that ~33% into the JSON body —
+// slow-to-failing on cell data, and the user just sees "Could not upload the
+// photo." Downscale via canvas before it ever becomes a data URL. Re-encodes
+// as JPEG regardless of source format, which also sidesteps HEIC/whatever
+// the phone camera actually wrote landing in a PNG-only <canvas> pipeline.
+function downscaleImage(file, maxEdge = PHOTO_MAX_EDGE, quality = 0.85) {
+  const objectUrl = URL.createObjectURL(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (err) {
+        reject(err);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Could not read that photo')); };
+    img.src = objectUrl;
+  });
+}
+
 async function onChange(e) {
   if (e.target.id !== 'shot' || !e.target.files?.length) return;
   const input = e.target;
   if (input.dataset.busy) return;   // a second change event before the upload resolves must not fire twice
-  input.dataset.busy = '1';
   const file = input.files[0];
+  // The accept="image/*" attribute is advisory only — a file picker or file
+  // manager can still hand back anything. Check the real type before doing
+  // any work with it.
+  if (!file.type.startsWith('image/')) {
+    toast('That file is not a photo', 'bad');
+    input.value = '';
+    return;
+  }
+  input.dataset.busy = '1';
   try {
     // Write and reload are different failure modes here too: a successful
     // photoAdd followed only by a failed refresh() must not report "Could
     // not upload the photo" — it uploaded; only the screen didn't refresh to
     // show it.
-    let dataUrl;
     try {
-      dataUrl = await new Promise((res, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => res(fr.result);
-        fr.onerror = () => rej(new Error('Could not read that photo'));
-        fr.onabort = () => rej(new Error('Photo read was cancelled'));
-        fr.readAsDataURL(file);
-      });
+      const dataUrl = await downscaleImage(file);
       await run('photoAdd', { project_id: openId(), dataUrl, caption: '' });
-    } catch {
+    } catch (err) {
       delete input.dataset.busy;
-      toast('Could not upload the photo', 'bad');
+      toast(err?.code === 'PHOTO_TOO_LARGE' ? err.message : 'Could not upload the photo', 'bad');
       return;
     }
     toast('Photo added');
