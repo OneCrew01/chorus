@@ -49,12 +49,29 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;          // never intercept the Apps Script call
-  const isCode = /\.(html|js|json)$/.test(url.pathname) || url.pathname.endsWith('/');
+
+  // vendor/ is third-party code, immutable per release — cache-first like any
+  // other static asset, not network-first. Without this exclusion the regex
+  // below also matches vendor/three.module.js, so the largest file in the app
+  // (~1.3MB) would be re-fetched over the network on every online page load,
+  // even though the atomic/tolerant install split exists specifically to keep
+  // that file's cost off the critical path.
+  const isVendor = url.pathname.includes('/vendor/');
+  const isCode = !isVendor && (/\.(html|js|json)$/.test(url.pathname) || url.pathname.endsWith('/'));
 
   if (isCode) {
     e.respondWith(
       fetch(e.request)
-        .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return res; })
+        .then(res => {
+          // fetch() resolves on 404/500 too — it only rejects on a network
+          // failure. Caching a non-ok response would serve that broken
+          // response as the offline fallback on every request after.
+          if (res.ok && e.request.method === 'GET') {
+            const copy = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, copy));
+          }
+          return res;
+        })
         .catch(() => caches.match(e.request))
     );
   } else {

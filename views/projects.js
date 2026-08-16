@@ -113,17 +113,21 @@ async function onChange(e) {
   if (input.dataset.busy) return;   // a second change event before the upload resolves must not fire twice
   input.dataset.busy = '1';
   const file = input.files[0];
-  const dataUrl = await new Promise(res => {
-    const fr = new FileReader();
-    fr.onload = () => res(fr.result);
-    fr.readAsDataURL(file);
-  });
   try {
+    const dataUrl = await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = () => rej(new Error('Could not read that photo'));
+      fr.onabort = () => rej(new Error('Photo read was cancelled'));
+      fr.readAsDataURL(file);
+    });
     await run('photoAdd', { project_id: openId(), dataUrl, caption: '' });
     toast('Photo added');
     await refresh();
   } catch {
     delete input.dataset.busy;
     toast('Could not upload the photo', 'bad');
+  } finally {
+    input.value = '';   // so picking the same file twice in a row still fires change
   }
 }
