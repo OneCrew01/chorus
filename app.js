@@ -95,6 +95,10 @@ document.addEventListener('click', e => {
   const nav = e.target.closest('.nav button');
   if (nav) navigate(nav.dataset.route);
 });
-addEventListener('popstate', e => { S.route = e.state?.route || 'momentum'; render(); });
+addEventListener('popstate', e => {
+  if (!S) return;              // not booted (or setup-link screen) — nothing to route
+  S.route = e.state?.route || 'momentum';
+  render();
+});
 
 boot();
