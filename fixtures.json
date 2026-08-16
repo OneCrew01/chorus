@@ -1,0 +1,34 @@
+{
+  "todayISO": "D+0",
+  "people": [
+    { "id": "p1", "name": "You",  "color": "#8b6cf5", "active": "TRUE" },
+    { "id": "p2", "name": "Wife", "color": "#4f8ef7", "active": "TRUE" },
+    { "id": "p3", "name": "Son",  "color": "#3ecf8e", "active": "TRUE" }
+  ],
+  "tasks": [
+    { "id": "t1", "title": "Move laundry to dryer", "owner_id": "p1", "recurrence_type": "completion", "recurrence_rule": { "intervalDays": 3 }, "est_minutes": 2, "anchor_time": "", "active": true },
+    { "id": "t2", "title": "Unload dishwasher", "owner_id": "p3", "recurrence_type": "completion", "recurrence_rule": { "intervalDays": 1 }, "est_minutes": 5, "anchor_time": "10:00", "active": true },
+    { "id": "t3", "title": "Trash to curb", "owner_id": "p2", "recurrence_type": "schedule", "recurrence_rule": { "weekdays": [2] }, "anchor_time": "18:00", "active": true },
+    { "id": "t4", "title": "Fix gate latch", "owner_id": "p1", "recurrence_type": "none", "recurrence_rule": null, "active": true }
+  ],
+  "log": [
+    { "id": "l1", "task_id": "t2", "step_id": "", "person_id": "p3", "completed_at": "D-0", "source": "day" },
+    { "id": "l2", "task_id": "t1", "step_id": "", "person_id": "p1", "completed_at": "D-4", "source": "momentum" },
+    { "id": "l3", "task_id": "t3", "step_id": "", "person_id": "p2", "completed_at": "D-7", "source": "inbox" }
+  ],
+  "projects": [
+    { "id": "pr1", "name": "Pergola", "type": "constructive", "status": "active", "parts_key": "pergola", "cover_photo_id": "" },
+    { "id": "pr2", "name": "K20 Suburban", "type": "restoration", "status": "active", "parts_key": "", "cover_photo_id": "" }
+  ],
+  "steps": [
+    { "id": "s1", "project_id": "pr1", "seq": 1, "title": "Mark the footprint", "detail": "String line and stakes, 10ft x 12ft, check diagonals match.", "materials_note": "Stakes, mason line", "planned_month": "M+0", "done_at": "D-9", "done_by": "p1", "part_ids": "" },
+    { "id": "s2", "project_id": "pr1", "seq": 2, "title": "Dig post holes 1 and 2", "detail": "24in deep, below frost line.", "materials_note": "Post hole digger", "planned_month": "M+0", "done_at": "D-3", "done_by": "p1", "part_ids": "post1,post2" },
+    { "id": "s3", "project_id": "pr1", "seq": 3, "title": "Set post 3 in concrete", "detail": "Plumb both axes, brace before the pour sets.", "materials_note": "1 bag fast-set, 2 braces", "planned_month": "M+0", "done_at": "", "done_by": "", "part_ids": "post3" },
+    { "id": "s4", "project_id": "pr2", "seq": 1, "title": "Pull the 700R4 TV cable", "detail": "Note the bracket geometry before removal.", "materials_note": "", "planned_month": "", "done_at": "D-14", "done_by": "p1", "part_ids": "" }
+  ],
+  "notes": [
+    { "id": "n1", "project_id": "pr1", "step_id": "s2", "body": "Hit clay at 18in on hole 2. Slow going.", "author_id": "p1", "created_at": "D-3T14:20" }
+  ],
+  "photos": [],
+  "config": { "default_alert_time": "08:00", "scheduler_last_ok": "D-0T06:00", "scheduler_last_error": "" }
+}

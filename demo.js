@@ -1,0 +1,49 @@
+// Fixture-mode backend. Resolves D+n / D-n / M+n tokens so fixtures never age out.
+import { addDays, monthKey } from './lib/dates.js';
+
+function resolve(value, todayISO) {
+  if (typeof value !== 'string') return value;
+  let m = value.match(/^D([+-])(\d+)(T.*)?$/);
+  if (m) return addDays(todayISO, (m[1] === '-' ? -1 : 1) * Number(m[2])) + (m[3] || '');
+  m = value.match(/^M([+-])(\d+)$/);
+  if (m) return monthKey(addDays(todayISO, (m[1] === '-' ? -1 : 1) * Number(m[2]) * 30));
+  return value;
+}
+
+function walk(node, todayISO) {
+  if (Array.isArray(node)) return node.map(n => walk(n, todayISO));
+  if (node && typeof node === 'object') {
+    const out = {};
+    for (const k in node) out[k] = walk(node[k], todayISO);
+    return out;
+  }
+  return resolve(node, todayISO);
+}
+
+export async function demoRun(method, params, state) {
+  if (method === 'bootstrap') {
+    const raw = await (await fetch('fixtures.json')).json();
+    const todayISO = new Date().toISOString().slice(0, 10);
+    return { ...walk(raw, todayISO), todayISO };
+  }
+  if (method === 'logComplete') {
+    const entry = { id: 'l' + Math.random().toString(36).slice(2, 8), task_id: params.task_id || '',
+      step_id: params.step_id || '', person_id: params.person_id, completed_at: state.todayISO, source: params.source };
+    state.log.push(entry);
+    return { entry };
+  }
+  if (method === 'taskUpsert') {
+    const t = { ...params.task, id: params.task.id || 't' + Math.random().toString(36).slice(2, 8), active: true };
+    const i = state.tasks.findIndex(x => x.id === t.id);
+    if (i >= 0) state.tasks[i] = t; else state.tasks.push(t);
+    return t;
+  }
+  if (method === 'stepComplete') {
+    const s = state.steps.find(x => x.id === params.step_id);
+    s.done_at = state.todayISO; s.done_by = params.person_id;
+    state.log.push({ id: 'l' + Math.random().toString(36).slice(2, 8), task_id: '', step_id: s.id,
+      person_id: params.person_id, completed_at: state.todayISO, source: 'projects' });
+    return { step: s };
+  }
+  return { ok: true };
+}

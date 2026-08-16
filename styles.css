@@ -1,0 +1,206 @@
+/* Chorus — token base + shell/nav layout only.
+   Each view task styles its own markup; this file does not reach into view internals. */
+
+:root {
+  --bg: #14121c;
+  --surface: rgba(255, 255, 255, .07);
+  --hairline: rgba(255, 255, 255, .09);
+  --text: #fff;
+  --muted: rgba(255, 255, 255, .5);
+  --ring-a: #8b6cf5;
+  --ring-b: #4f8ef7;
+  --accent-warm: #ff8a4c;
+  --success: #3ecf8e;
+  --error: #e06a5a;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --touch: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+button, input {
+  font-family: inherit;
+  color: inherit;
+}
+
+#screen {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-bottom: calc(var(--touch) + 24px);
+}
+
+.pad {
+  padding: 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* --- Bottom nav --- */
+
+.nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  border-top: 1px solid var(--hairline);
+  background: var(--bg);
+}
+
+.nav button {
+  flex: 1 1 0;
+  min-height: var(--touch);
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nav button.nav--on {
+  color: var(--text);
+  box-shadow: inset 0 2px 0 var(--ring-a);
+}
+
+/* --- Overlay / identity sheet --- */
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, .5);
+}
+
+#overlay[hidden] {
+  display: none;
+}
+
+.sheet {
+  width: 100%;
+  padding: 24px 16px calc(24px + var(--touch));
+  background: var(--bg);
+  border-top: 1px solid var(--hairline);
+  border-radius: 16px 16px 0 0;
+}
+
+.sheet h2 {
+  margin: 0 0 16px;
+}
+
+.whos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.who {
+  min-width: var(--touch);
+  min-height: var(--touch);
+  padding: 10px 20px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--c, var(--surface));
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* --- PIN gate --- */
+
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100%;
+  padding: 24px;
+  text-align: center;
+}
+
+.gate input {
+  min-height: var(--touch);
+  width: 100%;
+  max-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 18px;
+  text-align: center;
+}
+
+.gate button {
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 8px 24px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--ring-a), var(--ring-b));
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* --- Toast --- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--touch) + 16px);
+  z-index: 30;
+  transform: translate(-50%, 12px);
+  opacity: 0;
+  transition: transform .2s ease, opacity .2s ease;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  font-size: 14px;
+  max-width: 90vw;
+  pointer-events: none;
+}
+
+.toast--in {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.toast--bad {
+  border-color: var(--error);
+}
+
+.toast--good {
+  border-color: var(--success);
+}
+
+/* --- Warning banner (staleness, errors) --- */
+
+.warn {
+  padding: 10px 16px;
+  background: rgba(224, 106, 90, .15);
+  border-bottom: 1px solid var(--error);
+  color: var(--text);
+  font-size: 14px;
+}
