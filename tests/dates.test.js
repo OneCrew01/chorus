@@ -19,9 +19,10 @@ test('addDays crosses month and year boundaries adjacent to a DST transition dat
 });
 
 test('addDays is TZ-independent: identical results across all timezones', () => {
-  // Run the same date arithmetic in multiple timezones. UTC-noon anchoring should
-  // produce identical results in all zones. Naive local-midnight implementations fail
-  // when the transition occurs at exactly midnight (America/Santiago 2024-09-08 at 24:00).
+  // Run the same date arithmetic in multiple timezones. ISO strings parse as UTC, so
+  // implementations that read with local getters fail in negative-offset zones:
+  // `new Date('2026-03-07')` parses as UTC midnight, and in America/Santiago the
+  // local calendar day is the previous day. This test catches that anti-pattern.
   const zones = ['UTC', 'America/Santiago', 'Pacific/Kiritimati'];
   const testCases = [
     { input: ['2026-03-07', 1], expected: '2026-03-08' },
@@ -31,11 +32,9 @@ test('addDays is TZ-independent: identical results across all timezones', () => 
     { input: ['2026-03-05', -6], expected: '2026-02-27' },
   ];
 
-  const results = {};
   for (const zone of zones) {
-    results[zone] = [];
     for (const testCase of testCases) {
-      // Use file:// URL on Windows, relative import path on Unix
+      // Use file:// URL on Windows for ES module resolution
       const modulePath = process.platform === 'win32'
         ? `file:///${process.cwd().replace(/\\/g, '/')}/lib/dates.js`
         : `${process.cwd()}/lib/dates.js`;
@@ -45,26 +44,15 @@ test('addDays is TZ-independent: identical results across all timezones', () => 
         console.log(addDays('${testCase.input[0]}', ${testCase.input[1]}));
       `;
 
-      try {
-        const result = execFileSync(process.execPath, ['-e', childScript], {
-          env: { ...process.env, TZ: zone },
-          encoding: 'utf-8',
-        }).trim();
-        results[zone].push(result);
-      } catch (err) {
-        results[zone].push(`ERROR: ${err.message}`);
-      }
-    }
-  }
+      const result = execFileSync(process.execPath, ['-e', childScript], {
+        env: { ...process.env, TZ: zone },
+        encoding: 'utf-8',
+      }).trim();
 
-  // All zones should produce identical results
-  const firstZoneResults = results[zones[0]];
-  for (const zone of zones.slice(1)) {
-    for (let i = 0; i < testCases.length; i++) {
       assert.equal(
-        results[zone][i],
-        firstZoneResults[i],
-        `Zone ${zone} returned ${results[zone][i]} but ${zones[0]} returned ${firstZoneResults[i]} for input ${JSON.stringify(testCases[i].input)}`
+        result,
+        testCase.expected,
+        `Zone ${zone} returned ${result} but expected ${testCase.expected} for input ${JSON.stringify(testCase.input)}`
       );
     }
   }
