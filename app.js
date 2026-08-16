@@ -38,7 +38,7 @@ export function navigate(route) {
   render();
 }
 
-function render() {
+export function render() {
   const view = ROUTES[S.route] || renderMomentum;
   view($('#screen'));
   document.querySelectorAll('.nav button').forEach(b =>

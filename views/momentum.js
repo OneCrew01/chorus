@@ -1,4 +1,4 @@
-import { S, run, refresh } from '../app.js';
+import { S, run, refresh, render } from '../app.js';
 import { esc, escAttr, toast, bind } from '../ui.js';
 import { ringState, isSchedulerStale } from '../lib/pace.js';
 import { dueState } from '../lib/recurrence.js';
@@ -123,5 +123,95 @@ async function onClick(e) {
       toast('Could not make it recurring — ' + err.message, 'bad');
     }
     return;
+  }
+  const add = e.target.closest('[data-add]');
+  if (add) return onAdd(add.dataset.add);
+  const project = e.target.closest('[data-project]');
+  if (project) {
+    // Same push-state-then-render shape views/projects.js uses for its own
+    // in-view navigation (data-open). Reaching into app.js's render() rather
+    // than importing renderProjects directly here avoids a module cycle:
+    // app.js already imports renderMomentum AND renderProjects, so this
+    // view importing the other view back would close a loop.
+    history.pushState({ route: 'projects' }, '', `#/projects?p=${project.dataset.project}`);
+    S.route = 'projects';
+    render();
+  }
+}
+
+// The minimum that satisfies spec Goal 2 ("capture a one-off in under five
+// seconds") without building a form system. window.prompt is deliberately
+// the smallest thing that works here — it blocks the whole page while open,
+// so it cannot itself be double-fired, but the write that follows it still
+// can be raced by a fast repeat tap once the dialog closes. Same inFlight
+// idiom as the rest of this file, keyed by add-kind rather than an entity id
+// since there is no entity yet.
+async function onAdd(kind) {
+  if (kind === 'oneoff') return addOneoff();
+  if (kind === 'chore') return addChore();
+  if (kind === 'project') return addProject();
+}
+
+async function addOneoff() {
+  const title = window.prompt('What do you need to do?');
+  if (!title || !title.trim()) return;
+  const key = 'add:oneoff';
+  if (inFlight.has(key)) return;
+  inFlight.add(key);
+  try {
+    await run('taskUpsert', { task: { title: title.trim(), recurrence_type: 'none' }, person_id: S.me });
+    await refresh();
+    toast('Added');
+  } catch (err) {
+    toast('Could not add that — ' + err.message, 'bad');
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+async function addChore() {
+  const title = window.prompt('What’s the chore?');
+  if (!title || !title.trim()) return;
+  const raw = window.prompt('Every how many days?');
+  if (raw === null) return;                    // cancelled
+  const interval = Number(raw);
+  // A bad rule here is exactly the NaN-ring hazard the bootstrap shape check
+  // exists to catch server-side — reject it at the source instead of relying
+  // on that backstop.
+  if (!Number.isFinite(interval) || interval <= 0) {
+    toast('Needs to be a number of days greater than zero', 'bad');
+    return;
+  }
+  const key = 'add:chore';
+  if (inFlight.has(key)) return;
+  inFlight.add(key);
+  try {
+    await run('taskUpsert', {
+      task: { title: title.trim(), recurrence_type: 'completion', recurrence_rule: { intervalDays: interval } },
+      person_id: S.me
+    });
+    await refresh();
+    toast('Added');
+  } catch (err) {
+    toast('Could not add that — ' + err.message, 'bad');
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+async function addProject() {
+  const name = window.prompt('Project name?');
+  if (!name || !name.trim()) return;
+  const key = 'add:project';
+  if (inFlight.has(key)) return;
+  inFlight.add(key);
+  try {
+    await run('projectUpsert', { project: { name: name.trim(), type: 'constructive', parts_key: '' }, person_id: S.me });
+    await refresh();
+    toast('Added');
+  } catch (err) {
+    toast('Could not add that — ' + err.message, 'bad');
+  } finally {
+    inFlight.delete(key);
   }
 }

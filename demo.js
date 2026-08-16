@@ -75,6 +75,14 @@ export async function demoRun(method, params, state) {
     cache.photos.push(photo);
     return { photo };
   }
+  if (method === 'projectUpsert') {
+    const pr = { ...params.project, id: params.project.id || 'pr' + Math.random().toString(36).slice(2, 8),
+      status: params.project.status || 'active', cover_photo_id: params.project.cover_photo_id || '',
+      created_at: cache.todayISO };
+    const i = cache.projects.findIndex(x => x.id === pr.id);
+    if (i >= 0) cache.projects[i] = pr; else cache.projects.push(pr);
+    return pr;
+  }
   if (method === 'taskPromote') {
     const t = cache.tasks.find(x => x.id === params.task_id);
     if (!t) throw new Error('taskPromote: no task ' + params.task_id);
