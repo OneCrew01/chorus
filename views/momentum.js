@@ -86,10 +86,21 @@ export function renderMomentum(root) {
   bind(root, 'click', onClick);
 }
 
+// Re-entry guard: the write window is a full Apps Script round trip (400ms-3s
+// on a cold /exec redirect) on a touch target, on a phone, with only a CSS
+// class as feedback — a second tap in that window must not fire a second
+// write. Module-level Set keyed on the entity id, released in a finally: the
+// same idiom views/projects.js already uses for step completion, not a new
+// one. The server is idempotent too (ChorusWebApp.gs api_logComplete_), so
+// this guard is about responsiveness, not correctness.
+const inFlight = new Set();
+
 async function onClick(e) {
   const done = e.target.closest('[data-complete]');
   if (done) {
     const id = done.dataset.complete;
+    if (inFlight.has(id)) return;
+    inFlight.add(id);
     done.classList.add('ck--on');                       // optimistic
     try {
       await run('logComplete', { task_id: id, person_id: S.me, source: 'momentum' });
@@ -97,6 +108,8 @@ async function onClick(e) {
     } catch (err) {
       done.classList.remove('ck--on');                  // visible rollback, never a silent failure
       toast('Could not save — try again', 'bad');
+    } finally {
+      inFlight.delete(id);
     }
     return;
   }

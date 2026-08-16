@@ -43,11 +43,22 @@ export function renderDay(root) {
   bind(root, 'click', onClick);
 }
 
+// Same re-entry idiom as views/projects.js and views/momentum.js: a
+// module-level Set keyed on the entity id, released in a finally. The write
+// window here is a full Apps Script round trip with only a CSS class as
+// feedback, so a second tap must not fire a second write. The server
+// (ChorusWebApp.gs api_logComplete_) is idempotent too — this guard is about
+// responsiveness, not correctness.
+const inFlight = new Set();
+
 async function onClick(e) {
   const t = e.target.closest('[data-complete]');
   const s = e.target.closest('[data-step]');
   if (!t && !s) return;
   const btn = t || s;
+  const id = t ? t.dataset.complete : s.dataset.step;
+  if (inFlight.has(id)) return;
+  inFlight.add(id);
   btn.classList.add('ck--on');
   try {
     if (t) await run('logComplete', { task_id: t.dataset.complete, person_id: S.me, source: 'day' });
@@ -56,5 +67,7 @@ async function onClick(e) {
   } catch {
     btn.classList.remove('ck--on');
     toast('Could not save — try again', 'bad');
+  } finally {
+    inFlight.delete(id);
   }
 }
