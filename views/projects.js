@@ -54,19 +54,34 @@ export function renderProjects(root) {
   bind(root, 'submit', onSubmit);
 }
 
+// The same step renders in two controls at once — the Next-step callout's
+// "Mark this done" button and that step's own row checkbox in "All steps" —
+// since `next` is just the first undone step and steps.map() renders every
+// step including it. Guarding dataset.busy on the tapped node leaves the
+// other control live, so the guard is keyed on the step id itself, in a
+// module-level set that outlives any single render.
+const inFlight = new Set();
+
 async function onClick(e) {
   const open = e.target.closest('[data-open]');
   if (open) { history.pushState({ route: 'projects' }, '', `#/projects?p=${open.dataset.open}`); renderProjects(e.currentTarget); return; }
   if (e.target.closest('[data-back]')) { history.pushState({ route: 'projects' }, '', '#/projects'); renderProjects(e.currentTarget); return; }
   const st = e.target.closest('[data-step]');
-  if (!st || st.dataset.busy) return;   // a second tap before the write resolves must not log twice
-  st.dataset.busy = '1';
+  if (!st) return;
+  const stepId = st.dataset.step;
+  if (inFlight.has(stepId)) return;   // either control for this step already has a write in flight
+  inFlight.add(stepId);
   try {
-    await run('stepComplete', { step_id: st.dataset.step, person_id: S.me });
+    await run('stepComplete', { step_id: stepId, person_id: S.me });
     await refresh();
   } catch {
-    delete st.dataset.busy;
     toast('Could not save — try again', 'bad');
+  } finally {
+    // refresh() re-renders the detail view; on success the step now has
+    // done_at set so neither control re-fires anyway, but on failure the
+    // same two live nodes remain — release unconditionally or a failed
+    // write leaves the step permanently untappable.
+    inFlight.delete(stepId);
   }
 }
 
