@@ -58,6 +58,13 @@ export async function demoRun(method, params, state) {
       person_id: params.person_id, completed_at: cache.todayISO, source: 'projects' });
     return { step: s };
   }
+  if (method === 'noteAdd') {
+    const n = { id: 'n' + Math.random().toString(36).slice(2, 8), project_id: params.project_id,
+      step_id: params.step_id || '', body: params.body, author_id: params.author_id,
+      created_at: cache.todayISO + 'T' + new Date().toTimeString().slice(0, 5) };
+    cache.notes.push(n);
+    return { note: n };
+  }
   if (method === 'taskPromote') {
     const t = cache.tasks.find(x => x.id === params.task_id);
     if (!t) throw new Error('taskPromote: no task ' + params.task_id);
