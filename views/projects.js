@@ -76,10 +76,21 @@ async function onClick(e) {
   if (inFlight.has(stepId)) return;   // either control for this step already has a write in flight
   inFlight.add(stepId);
   try {
-    await run('stepComplete', { step_id: stepId, person_id: S.me });
-    await refresh();
-  } catch {
-    toast('Could not save — try again', 'bad');
+    // Write and reload are different failure modes — a successful
+    // stepComplete followed only by a failed refresh() must not report
+    // "Could not save": the step DID complete, and telling the operator
+    // otherwise invites a duplicate write past the guard above.
+    try {
+      await run('stepComplete', { step_id: stepId, person_id: S.me });
+    } catch {
+      toast('Could not save — try again', 'bad');
+      return;
+    }
+    try {
+      await refresh();
+    } catch {
+      toast('Saved — but the screen could not refresh. Pull to retry.', 'bad');
+    }
   } finally {
     // refresh() re-renders the detail view; on success the step now has
     // done_at set so neither control re-fires anyway, but on failure the
@@ -97,13 +108,22 @@ async function onSubmit(e) {
   const body = form.body.value.trim();
   if (!body) return;
   form.dataset.busy = '1';
+  // Same write/reload split as onClick above: a successful noteAdd followed
+  // only by a failed refresh() must not report "Could not save the note" —
+  // the note landed, only the screen didn't update to show it.
   try {
     await run('noteAdd', { project_id: openId(), body, author_id: S.me });
-    form.reset();
-    await refresh();
   } catch {
     delete form.dataset.busy;
     toast('Could not save the note', 'bad');
+    return;
+  }
+  form.reset();
+  try {
+    await refresh();
+  } catch {
+    delete form.dataset.busy;
+    toast('Saved — but the screen could not refresh. Pull to retry.', 'bad');
   }
 }
 
@@ -114,19 +134,32 @@ async function onChange(e) {
   input.dataset.busy = '1';
   const file = input.files[0];
   try {
-    const dataUrl = await new Promise((res, rej) => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.onerror = () => rej(new Error('Could not read that photo'));
-      fr.onabort = () => rej(new Error('Photo read was cancelled'));
-      fr.readAsDataURL(file);
-    });
-    await run('photoAdd', { project_id: openId(), dataUrl, caption: '' });
+    // Write and reload are different failure modes here too: a successful
+    // photoAdd followed only by a failed refresh() must not report "Could
+    // not upload the photo" — it uploaded; only the screen didn't refresh to
+    // show it.
+    let dataUrl;
+    try {
+      dataUrl = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = () => rej(new Error('Could not read that photo'));
+        fr.onabort = () => rej(new Error('Photo read was cancelled'));
+        fr.readAsDataURL(file);
+      });
+      await run('photoAdd', { project_id: openId(), dataUrl, caption: '' });
+    } catch {
+      delete input.dataset.busy;
+      toast('Could not upload the photo', 'bad');
+      return;
+    }
     toast('Photo added');
-    await refresh();
-  } catch {
-    delete input.dataset.busy;
-    toast('Could not upload the photo', 'bad');
+    try {
+      await refresh();
+    } catch {
+      delete input.dataset.busy;
+      toast('Saved — but the screen could not refresh. Pull to retry.', 'bad');
+    }
   } finally {
     input.value = '';   // so picking the same file twice in a row still fires change
   }

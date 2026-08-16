@@ -61,12 +61,25 @@ async function onClick(e) {
   inFlight.add(id);
   btn.classList.add('ck--on');
   try {
-    if (t) await run('logComplete', { task_id: t.dataset.complete, person_id: S.me, source: 'day' });
-    else await run('stepComplete', { step_id: s.dataset.step, person_id: S.me });
-    await refresh();
-  } catch {
-    btn.classList.remove('ck--on');
-    toast('Could not save — try again', 'bad');
+    // The write and the reload are two different failure modes and must not
+    // share a catch. await refresh() used to sit inside the write's try, so
+    // a successful write followed only by a failed reload rolled the
+    // checkbox back and said "Could not save — try again" — which is false
+    // (the write landed) and invites the exact duplicate write the inFlight
+    // guard above exists to prevent.
+    try {
+      if (t) await run('logComplete', { task_id: t.dataset.complete, person_id: S.me, source: 'day' });
+      else await run('stepComplete', { step_id: s.dataset.step, person_id: S.me });
+    } catch {
+      btn.classList.remove('ck--on');
+      toast('Could not save — try again', 'bad');
+      return;
+    }
+    try {
+      await refresh();
+    } catch {
+      toast('Saved — but the screen could not refresh. Pull to retry.', 'bad');
+    }
   } finally {
     inFlight.delete(id);
   }

@@ -49,10 +49,27 @@ async function onClick(e) {
   try {
     if (b.dataset.act === 'done') await run('logComplete', { task_id: id, person_id: S.me, source: 'inbox' });
     else defer(id);
-    setTimeout(refresh, 220);
   } catch {
     front.classList.remove('dk--out-right', 'dk--out-left');
     delete front.dataset.busy;                 // let them retry after a failure
     toast('Could not save — try again', 'bad');
+    return;
   }
+  // The write succeeded — this used to be a bare setTimeout(refresh, 220),
+  // not awaited and outside any handler. If that bootstrap failed the
+  // rejection was unhandled: no toast, no rollback, and the card stayed
+  // swiped off-screen with dataset.busy still set — an empty, frozen-looking
+  // deck that reads as success. Catch it: the card comes back and the busy
+  // flag clears, but the toast says the save worked, because it did — a
+  // reload failure here must never invite a duplicate tap on a card whose
+  // write already landed.
+  setTimeout(async () => {
+    try {
+      await refresh();
+    } catch {
+      front.classList.remove('dk--out-right', 'dk--out-left');
+      delete front.dataset.busy;
+      toast('Saved — but the inbox could not reload. Pull to refresh.', 'bad');
+    }
+  }, 220);
 }

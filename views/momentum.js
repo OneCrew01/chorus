@@ -103,11 +103,22 @@ async function onClick(e) {
     inFlight.add(id);
     done.classList.add('ck--on');                       // optimistic
     try {
-      await run('logComplete', { task_id: id, person_id: S.me, source: 'momentum' });
-      await refresh();
-    } catch (err) {
-      done.classList.remove('ck--on');                  // visible rollback, never a silent failure
-      toast('Could not save — try again', 'bad');
+      // Same write/reload split as day.js and views/projects.js: a
+      // successful logComplete followed only by a failed refresh() must not
+      // roll the checkbox back and claim the save itself failed — that
+      // reading is false and invites a duplicate write past the guard above.
+      try {
+        await run('logComplete', { task_id: id, person_id: S.me, source: 'momentum' });
+      } catch (err) {
+        done.classList.remove('ck--on');                // visible rollback, never a silent failure
+        toast('Could not save — try again', 'bad');
+        return;
+      }
+      try {
+        await refresh();
+      } catch (err) {
+        toast('Saved — but the screen could not refresh. Pull to retry.', 'bad');
+      }
     } finally {
       inFlight.delete(id);
     }
