@@ -1,0 +1,20 @@
+{
+  "camera": { "position": [5.5, 3.4, 6.2], "target": [0, 1.1, 0] },
+  "materials": {
+    "wood":     { "color": "#c99b63", "roughness": 0.85 },
+    "concrete": { "color": "#9a9a94", "roughness": 0.95 }
+  },
+  "parts": [
+    { "id": "post1", "type": "box", "size": [0.14, 2.4, 0.14], "pos": [-1.5, 1.2, -1.8], "material": "wood" },
+    { "id": "post2", "type": "box", "size": [0.14, 2.4, 0.14], "pos": [ 1.5, 1.2, -1.8], "material": "wood" },
+    { "id": "post3", "type": "box", "size": [0.14, 2.4, 0.14], "pos": [-1.5, 1.2,  1.8], "material": "wood" },
+    { "id": "post4", "type": "box", "size": [0.14, 2.4, 0.14], "pos": [ 1.5, 1.2,  1.8], "material": "wood" },
+    { "id": "beamA", "type": "box", "size": [0.09, 0.28, 4.0], "pos": [-1.5, 2.5, 0], "material": "wood" },
+    { "id": "beamB", "type": "box", "size": [0.09, 0.28, 4.0], "pos": [ 1.5, 2.5, 0], "material": "wood" },
+    { "id": "raft1", "type": "box", "size": [3.4, 0.06, 0.14], "pos": [0, 2.72, -1.5], "material": "wood" },
+    { "id": "raft2", "type": "box", "size": [3.4, 0.06, 0.14], "pos": [0, 2.72, -0.5], "material": "wood" },
+    { "id": "raft3", "type": "box", "size": [3.4, 0.06, 0.14], "pos": [0, 2.72,  0.5], "material": "wood" },
+    { "id": "raft4", "type": "box", "size": [3.4, 0.06, 0.14], "pos": [0, 2.72,  1.5], "material": "wood" },
+    { "id": "slab",  "type": "box", "size": [3.6, 0.1, 4.2],   "pos": [0, -0.05, 0], "material": "concrete" }
+  ]
+}
