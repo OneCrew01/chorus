@@ -167,3 +167,18 @@ test('chOrphanDates_ finds nothing when every mapped date is still current', () 
 test('chOrphanDates_ on an empty map returns nothing to cancel', () => {
   assert.deepEqual(chOrphanDates_([], ['2026-08-15']), []);
 });
+
+// Sixth case: {weekdays: [], monthDay: 15} passes the shape-check guard
+// (monthDay is set) and used to diverge between the two implementations —
+// [] is truthy, so a naive `rule.weekdays ?` check took the weekday branch,
+// matched nothing, and never fell back to monthDay. Both implementations
+// now normalise an empty weekdays array to "absent" before either branch
+// reads it, so this is monthDay-only in both, not a throw and not
+// zero-occurrence.
+test('chOccurrences_ matches occurrencesBetween: an empty weekdays array WITH a monthDay set falls back to monthDay', { skip }, () => {
+  const monthlyWithEmptyWeekdays = { recurrence_type: 'schedule', recurrence_rule: { weekdays: [], monthDay: 15 } };
+  const expected = occurrencesBetween(monthlyWithEmptyWeekdays, '2026-08-01', '2026-09-30');
+  const actual = chOccurrences_(monthlyWithEmptyWeekdays, '2026-08-01', '2026-09-30');
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(actual, ['2026-08-15', '2026-09-15']);
+});

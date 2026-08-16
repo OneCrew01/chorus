@@ -89,6 +89,17 @@ test('occurrencesBetween expands a completion rule from its next due date', () =
   );
 });
 
+test('an empty weekdays array with a monthDay set is monthDay-only, not permanently not-due', () => {
+  // {weekdays: [], monthDay: 15}: [] is truthy, so a naive `rule.weekdays ?`
+  // check took the weekday branch, matched nothing, and dueState never fell
+  // back to monthDay — the chore silently stopped existing. Normalised now:
+  // due exactly on the 15th, same as a plain { monthDay: 15 } rule.
+  const monthlyWithEmptyWeekdays = { recurrence_type: 'schedule', recurrence_rule: { weekdays: [], monthDay: 15 } };
+  assert.equal(dueState(monthlyWithEmptyWeekdays, null, '2026-08-15').due, true);
+  assert.equal(dueState(monthlyWithEmptyWeekdays, null, '2026-08-16').due, false);
+  assert.equal(expectedMonthly(monthlyWithEmptyWeekdays), 1);
+});
+
 test('expectedMonthly converts rules to monthly volume', () => {
   assert.equal(Math.round(expectedMonthly({ recurrence_type: 'completion', recurrence_rule: { intervalDays: 3 } }) * 100) / 100, 10.15);
   assert.equal(expectedMonthly(trash), 4.35);
