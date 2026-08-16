@@ -511,3 +511,59 @@ section {
   text-align: left;
   cursor: pointer;
 }
+
+/* --- Day view: timeline entries --- */
+/* .tl is the ribbon of timed entries; untimed entries reuse .e without
+   .e--timed and never render an .e__tm — that's the forcedTimes: 0 contract. */
+
+.tl {
+  position: relative;
+}
+
+.e {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.e--timed {
+  padding-left: 2px;
+}
+
+.e__tm {
+  min-width: 48px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.e__dot {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  border-radius: 50%;
+  background: var(--ring-a);
+}
+
+.e__cd {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.e__t {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: 15px;
+}
+
+.e__s {
+  grid-row: 2;
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--muted);
+}
