@@ -205,6 +205,14 @@ button, input {
   font-size: 14px;
 }
 
+/* Distinct from staleness (.warn): the scheduler IS running, but at least
+   one chore failed to reconcile. Different cause, different fix — so a
+   different color rather than a second red banner that reads as one alert. */
+.warn--error {
+  background: rgba(255, 138, 76, .15);
+  border-bottom: 1px solid var(--accent-warm);
+}
+
 /* --- Momentum view --- */
 
 .hd {

@@ -1,6 +1,6 @@
 import { S, run, refresh } from '../app.js';
 import { esc, escAttr, toast, bind } from '../ui.js';
-import { ringState } from '../lib/pace.js';
+import { ringState, isSchedulerStale } from '../lib/pace.js';
 import { dueState } from '../lib/recurrence.js';
 import { findPromotionCandidate } from '../lib/promotion.js';
 
@@ -67,11 +67,12 @@ export function renderMomentum(root) {
   const chores = S.tasks.filter(t => t.active && t.recurrence_type !== 'none');
   const oneoffs = S.tasks.filter(t => t.active && t.recurrence_type === 'none');
   const r = ringState(S.tasks, S.steps, S.log, S.todayISO);
-  const stale = S.config?.scheduler_last_ok &&
-    (Date.now() - Date.parse(S.config.scheduler_last_ok)) > 86400000;
+  const stale = isSchedulerStale(S.config?.scheduler_last_ok, Date.now());
+  const schedulerError = S.config?.scheduler_last_error || '';
 
   root.innerHTML = `
-    ${stale ? `<p class="warn">Reminders may not be sending — the scheduler hasn't run since ${esc(S.config.scheduler_last_ok)}.</p>` : ''}
+    ${stale ? `<p class="warn">Reminders may not be sending — the scheduler hasn't run since ${esc(S.config?.scheduler_last_ok || 'ever')}.</p>` : ''}
+    ${schedulerError ? `<p class="warn warn--error">The scheduler is running, but some reminders failed to reconcile: ${esc(schedulerError)}</p>` : ''}
     <header class="hd"><b>Chorus</b><span>${esc(S.todayISO.slice(0, 7))}</span></header>
     ${ring(r)}
     <section><h3 class="lab">The crew</h3><div class="crew">${crew()}</div></section>
