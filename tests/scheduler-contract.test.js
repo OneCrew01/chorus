@@ -133,3 +133,14 @@ test('chOccurrences_ matches occurrencesBetween: a schedule rule with neither we
   assert.throws(() => occurrencesBetween(malformed, '2026-08-15', '2026-08-22'));
   assert.throws(() => chOccurrences_(malformed, '2026-08-15', '2026-08-22'));
 });
+
+test('chOccurrences_ matches occurrencesBetween: an empty weekdays array is malformed, not zero-occurrence', { skip }, () => {
+  // weekdays: [] is truthy, so a naive `!rule.weekdays` guard lets it past
+  // and the weekday loop then never matches — silently returning [] instead
+  // of throwing. lib/recurrence.js's nextScheduled falls through its 7-day
+  // loop to the monthDay check and throws; chOccurrences_ must do the same
+  // rather than reminding nobody with no error stamp.
+  const emptyWeekdays = { recurrence_type: 'schedule', recurrence_rule: { weekdays: [] } };
+  assert.throws(() => occurrencesBetween(emptyWeekdays, '2026-08-15', '2026-08-22'));
+  assert.throws(() => chOccurrences_(emptyWeekdays, '2026-08-15', '2026-08-22'));
+});
