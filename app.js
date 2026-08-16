@@ -102,3 +102,8 @@ addEventListener('popstate', e => {
 });
 
 boot();
+
+// Gated OFF in demo mode so fixture verification reads a true zero in the console.
+if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
