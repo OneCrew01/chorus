@@ -27,9 +27,12 @@ test('adding a one-off does not move the ring', () => {
 });
 
 test('completing a one-off moves the ring UP', () => {
-  const before = ringState([laundry], [], log(5), '2026-08-15');
-  const after  = ringState([laundry], [], log(6), '2026-08-15');
+  const base = log(5);
+  const withOneoff = [...base, { id: 'lx', task_id: 't3', completed_at: '2026-08-10' }];
+  const before = ringState([laundry, oneoff], [], base, '2026-08-15');
+  const after  = ringState([laundry, oneoff], [], withOneoff, '2026-08-15');
   assert.ok(after.ratio > before.ratio);
+  assert.equal(after.target, before.target); // the one-off raised earned, never target
 });
 
 test('only this month counts', () => {
@@ -60,4 +63,17 @@ test('a target of zero renders an em dash, never NaN or 100%', () => {
 test('inactive chores are excluded from the target', () => {
   const r = ringState([{ ...laundry, active: false }], [], [], '2026-08-15');
   assert.equal(r.empty, true);
+});
+
+test('a malformed log entry does not crash the ring', () => {
+  const base = log(3);
+  const withMalformed = [
+    ...base,
+    { id: 'bad1', completed_at: null },
+    { id: 'bad2', completed_at: new Date('2026-08-10') },
+    { id: 'bad3' }, // missing completed_at
+  ];
+  const r = ringState([laundry], [], withMalformed, '2026-08-15');
+  assert.equal(r.earned, 3); // only the 3 valid entries count
+  assert.ok(r.ratio > 0); // ring computes successfully despite malformed entries
 });
