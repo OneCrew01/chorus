@@ -41,3 +41,58 @@ test('a one-off is due until it is done, then never again', () => {
   assert.equal(dueState(oneoff, '2026-08-14', '2026-08-15').due, false);
   assert.equal(dueState(oneoff, '2026-08-14', '2026-08-15').nextDueISO, null);
 });
+
+import { occurrencesBetween, expectedMonthly } from '../lib/recurrence.js';
+
+const trash = { recurrence_type: 'schedule', recurrence_rule: { weekdays: [2] } }; // Tuesday
+const rent  = { recurrence_type: 'schedule', recurrence_rule: { monthDay: 31 } };
+
+test('weekly schedule is due on its weekday regardless of history', () => {
+  // 2026-08-18 is a Tuesday. Last done a fortnight ago — still just "due today".
+  const s = dueState(trash, '2026-08-04', '2026-08-18');
+  assert.equal(s.due, true);
+  assert.equal(s.nextDueISO, '2026-08-18');
+});
+
+test('weekly schedule is not due on other days', () => {
+  assert.equal(dueState(trash, '2026-08-11', '2026-08-19').due, false);
+});
+
+test('missing an occurrence does not shift the next one', () => {
+  // Skipped the 18th entirely; the next is still the following Tuesday.
+  assert.equal(dueState(trash, '2026-08-04', '2026-08-19').nextDueISO, '2026-08-25');
+});
+
+test('completing today marks it not-due today', () => {
+  assert.equal(dueState(trash, '2026-08-18', '2026-08-18').due, false);
+});
+
+test('occurrencesBetween expands a weekly rule inclusively', () => {
+  assert.deepEqual(
+    occurrencesBetween(trash, '2026-08-15', '2026-09-01'),
+    ['2026-08-18', '2026-08-25', '2026-09-01']
+  );
+});
+
+test('occurrencesBetween clamps a monthly rule to short months', () => {
+  assert.deepEqual(
+    occurrencesBetween(rent, '2026-01-01', '2026-03-31'),
+    ['2026-01-31', '2026-02-28', '2026-03-31']
+  );
+});
+
+test('occurrencesBetween expands a completion rule from its next due date', () => {
+  const t = { recurrence_type: 'completion', recurrence_rule: { intervalDays: 3 }, last_completed: '2026-08-14' };
+  assert.deepEqual(
+    occurrencesBetween(t, '2026-08-15', '2026-08-24'),
+    ['2026-08-17', '2026-08-20', '2026-08-23']
+  );
+});
+
+test('expectedMonthly converts rules to monthly volume', () => {
+  assert.equal(Math.round(expectedMonthly({ recurrence_type: 'completion', recurrence_rule: { intervalDays: 3 } }) * 100) / 100, 10.15);
+  assert.equal(expectedMonthly(trash), 4.35);
+  assert.equal(expectedMonthly({ recurrence_type: 'schedule', recurrence_rule: { weekdays: [1, 4] } }), 8.7);
+  assert.equal(expectedMonthly(rent), 1);
+  assert.equal(expectedMonthly({ recurrence_type: 'none', recurrence_rule: null }), 0);
+});
