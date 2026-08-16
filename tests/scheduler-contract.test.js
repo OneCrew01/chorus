@@ -65,7 +65,7 @@ let cached = null;
 function loadSchedulerHelpers() {
   if (cached) return cached;
   const src = readFileSync(SCHEDULER_PATH, 'utf8');
-  const fns = ['chAddDaysISO_', 'chDaysInMonth_', 'chOccurrences_']
+  const fns = ['chAddDaysISO_', 'chDaysInMonth_', 'chOccurrences_', 'chOrphanDates_']
     .map((name) => extractFunction(src, name))
     .join('\n\n');
 
@@ -95,6 +95,10 @@ function loadSchedulerHelpers() {
 // normalize into a plain, same-realm array before asserting.
 function chOccurrences_(...args) {
   return Array.from(loadSchedulerHelpers().chOccurrences_(...args));
+}
+
+function chOrphanDates_(...args) {
+  return Array.from(loadSchedulerHelpers().chOrphanDates_(...args));
 }
 
 // Same four cases lib/recurrence.js's occurrencesBetween is exercised with in
@@ -143,4 +147,23 @@ test('chOccurrences_ matches occurrencesBetween: an empty weekdays array is malf
   const emptyWeekdays = { recurrence_type: 'schedule', recurrence_rule: { weekdays: [] } };
   assert.throws(() => occurrencesBetween(emptyWeekdays, '2026-08-15', '2026-08-22'));
   assert.throws(() => chOccurrences_(emptyWeekdays, '2026-08-15', '2026-08-22'));
+});
+
+// chOrphanDates_ backs the scheduler's reconciliation step (item 2 of the
+// 2026-08-15 fix wave): a `completion`-flavour chore done early moves its
+// whole remaining series, so the previously mapped occurrence dates must be
+// diffed against a freshly computed set and anything no longer present
+// cancelled — see the worked laundry example in the fix-wave spec, §9.
+test('chOrphanDates_ finds mapped dates absent from a fresh occurrence set', () => {
+  const previouslyMapped = ['2026-08-13', '2026-08-16', '2026-08-19'];
+  const freshlyComputed = ['2026-08-15', '2026-08-18'];
+  assert.deepEqual(chOrphanDates_(previouslyMapped, freshlyComputed), ['2026-08-13', '2026-08-16', '2026-08-19']);
+});
+
+test('chOrphanDates_ finds nothing when every mapped date is still current', () => {
+  assert.deepEqual(chOrphanDates_(['2026-08-15', '2026-08-18'], ['2026-08-15', '2026-08-18', '2026-08-21']), []);
+});
+
+test('chOrphanDates_ on an empty map returns nothing to cancel', () => {
+  assert.deepEqual(chOrphanDates_([], ['2026-08-15']), []);
 });
