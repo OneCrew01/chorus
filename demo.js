@@ -65,6 +65,16 @@ export async function demoRun(method, params, state) {
     cache.notes.push(n);
     return { note: n };
   }
+  if (method === 'photoAdd') {
+    // No real Drive in demo mode — drive_file_id stays blank rather than
+    // fabricating one. renderPhotoScene still renders the <img> from the
+    // photo record; only the thumbnail fetch itself has nothing to load.
+    const photo = { id: 'ph' + Math.random().toString(36).slice(2, 8), project_id: params.project_id,
+      step_id: params.step_id || '', drive_file_id: '', caption: params.caption || '',
+      taken_at: cache.todayISO + 'T' + new Date().toTimeString().slice(0, 5) };
+    cache.photos.push(photo);
+    return { photo };
+  }
   if (method === 'taskPromote') {
     const t = cache.tasks.find(x => x.id === params.task_id);
     if (!t) throw new Error('taskPromote: no task ' + params.task_id);

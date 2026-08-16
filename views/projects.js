@@ -25,6 +25,9 @@ function detail(p) {
   return `<header class="hd"><button class="back" data-back>‹</button><b>${esc(p.name)}</b>
     <span>${done} of ${steps.length}</span></header>
     <div id="scene" class="scene" data-parts="${escAttr(p.parts_key || '')}" data-type="${escAttr(p.type)}"></div>
+    ${p.type === 'restoration' ? `<label class="shoot">
+      <input type="file" accept="image/*" capture="environment" hidden id="shot">
+      <span>📷 Add a photo of where it stands</span></label>` : ''}
     ${next ? `<div class="next"><span class="lab">Next step</span><b>${esc(next.title)}</b>
       <p>${esc(next.detail)}</p>${next.materials_note ? `<p class="mat">Needs: ${esc(next.materials_note)}</p>` : ''}
       <button class="go" data-step="${escAttr(next.id)}">Mark this done</button></div>` : '<p class="muted pad">Every step is done.</p>'}
@@ -52,6 +55,7 @@ export function renderProjects(root) {
 
   bind(root, 'click', onClick);
   bind(root, 'submit', onSubmit);
+  bind(root, 'change', onChange);
 }
 
 // The same step renders in two controls at once — the Next-step callout's
@@ -100,5 +104,26 @@ async function onSubmit(e) {
   } catch {
     delete form.dataset.busy;
     toast('Could not save the note', 'bad');
+  }
+}
+
+async function onChange(e) {
+  if (e.target.id !== 'shot' || !e.target.files?.length) return;
+  const input = e.target;
+  if (input.dataset.busy) return;   // a second change event before the upload resolves must not fire twice
+  input.dataset.busy = '1';
+  const file = input.files[0];
+  const dataUrl = await new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.readAsDataURL(file);
+  });
+  try {
+    await run('photoAdd', { project_id: openId(), dataUrl, caption: '' });
+    toast('Photo added');
+    await refresh();
+  } catch {
+    delete input.dataset.busy;
+    toast('Could not upload the photo', 'bad');
   }
 }
