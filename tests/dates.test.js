@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { addDays, daysBetween, monthKey, daysInMonth, dayOfMonth, weekdayOf, clampToMonth } from '../lib/dates.js';
 
 test('addDays crosses month and year boundaries', () => {
@@ -8,10 +9,65 @@ test('addDays crosses month and year boundaries', () => {
   assert.equal(addDays('2026-03-05', -6), '2026-02-27');
 });
 
-test('addDays survives a DST transition', () => {
-  // US DST springs forward 2026-03-08. A naive local-midnight Date loses a day here.
+test('addDays crosses month and year boundaries adjacent to a DST transition date', () => {
+  // US DST springs forward on 2026-03-08 at 02:00 local time. This test verifies that
+  // month/year boundary arithmetic works correctly when the target dates straddle a
+  // DST-transition day. The test passes for both naive and UTC-anchored implementations
+  // because the transition occurs at 02:00 local time, not at midnight.
   assert.equal(addDays('2026-03-07', 1), '2026-03-08');
   assert.equal(addDays('2026-03-08', 1), '2026-03-09');
+});
+
+test('addDays is TZ-independent: identical results across all timezones', () => {
+  // Run the same date arithmetic in multiple timezones. UTC-noon anchoring should
+  // produce identical results in all zones. Naive local-midnight implementations fail
+  // when the transition occurs at exactly midnight (America/Santiago 2024-09-08 at 24:00).
+  const zones = ['UTC', 'America/Santiago', 'Pacific/Kiritimati'];
+  const testCases = [
+    { input: ['2026-03-07', 1], expected: '2026-03-08' },
+    { input: ['2026-03-08', 1], expected: '2026-03-09' },
+    { input: ['2026-08-30', 3], expected: '2026-09-02' },
+    { input: ['2026-12-31', 1], expected: '2027-01-01' },
+    { input: ['2026-03-05', -6], expected: '2026-02-27' },
+  ];
+
+  const results = {};
+  for (const zone of zones) {
+    results[zone] = [];
+    for (const testCase of testCases) {
+      // Use file:// URL on Windows, relative import path on Unix
+      const modulePath = process.platform === 'win32'
+        ? `file:///${process.cwd().replace(/\\/g, '/')}/lib/dates.js`
+        : `${process.cwd()}/lib/dates.js`;
+
+      const childScript = `
+        import { addDays } from '${modulePath}';
+        console.log(addDays('${testCase.input[0]}', ${testCase.input[1]}));
+      `;
+
+      try {
+        const result = execFileSync(process.execPath, ['-e', childScript], {
+          env: { ...process.env, TZ: zone },
+          encoding: 'utf-8',
+        }).trim();
+        results[zone].push(result);
+      } catch (err) {
+        results[zone].push(`ERROR: ${err.message}`);
+      }
+    }
+  }
+
+  // All zones should produce identical results
+  const firstZoneResults = results[zones[0]];
+  for (const zone of zones.slice(1)) {
+    for (let i = 0; i < testCases.length; i++) {
+      assert.equal(
+        results[zone][i],
+        firstZoneResults[i],
+        `Zone ${zone} returned ${results[zone][i]} but ${zones[0]} returned ${firstZoneResults[i]} for input ${JSON.stringify(testCases[i].input)}`
+      );
+    }
+  }
 });
 
 test('daysBetween is signed and whole', () => {
