@@ -1,4 +1,4 @@
-import { $, toast, bind } from './ui.js';
+import { $, esc, escAttr, toast, bind } from './ui.js';
 import { demoRun } from './demo.js';
 import { renderMomentum } from './views/momentum.js';
 import { renderDay } from './views/day.js';
@@ -12,7 +12,11 @@ const ROUTES = { momentum: renderMomentum, day: renderDay, inbox: renderInbox, p
 
 function execUrl() {
   const frag = new URLSearchParams(location.hash.replace(/^#/, ''));
-  if (frag.get('s')) localStorage.setItem('ch_exec', frag.get('s'));
+  if (frag.get('s')) {
+    localStorage.setItem('ch_exec', frag.get('s'));
+    // Don't leave the endpoint sitting in the address bar for a screenshot to catch.
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   return localStorage.getItem('ch_exec');
 }
 
@@ -51,7 +55,14 @@ async function boot() {
   if (!DEMO && !execUrl()) { $('#screen').innerHTML = '<p class="pad">Scan the setup link on this device first.</p>'; return; }
   if (!DEMO && !localStorage.getItem('ch_pin')) { showPin(); return; }
   S = { route: (location.hash.match(/^#\/(\w+)/) || [])[1] || 'momentum' };
-  await refresh();
+  try {
+    await refresh();
+  } catch (err) {
+    $('#screen').innerHTML =
+      `<p class="pad muted">Couldn't reach Chorus.<br>Check your connection and pull to retry.</p>`;
+    toast('Could not load — ' + err.message, 'bad');
+    return;
+  }
   if (!S.me) showIdentity();
 }
 
@@ -59,14 +70,14 @@ function showPin() {
   $('#screen').innerHTML = `<div class="gate"><h1>Chorus</h1><input id="pin" type="tel" inputmode="numeric" placeholder="PIN"><button id="pinGo">Enter</button></div>`;
   $('#pinGo').addEventListener('click', async () => {
     localStorage.setItem('ch_pin', $('#pin').value);
-    try { await run('ping'); boot(); }
+    try { await run('ping'); await boot(); }
     catch { localStorage.removeItem('ch_pin'); toast('Wrong PIN', 'bad'); }
   });
 }
 
 function showIdentity() {
   const html = S.people.filter(p => String(p.active) !== 'FALSE')
-    .map(p => `<button class="who" data-id="${p.id}" style="--c:${p.color}">${p.name}</button>`).join('');
+    .map(p => `<button class="who" data-id="${escAttr(p.id)}" style="--c:${escAttr(p.color)}">${esc(p.name)}</button>`).join('');
   $('#overlay').innerHTML = `<div class="sheet"><h2>Who's this?</h2><div class="whos">${html}</div></div>`;
   $('#overlay').hidden = false;
   bind($('#overlay'), 'click', e => {
