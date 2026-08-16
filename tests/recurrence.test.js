@@ -28,8 +28,11 @@ test('past the interval reports how overdue', () => {
 });
 
 test('doing it late shifts the next one late', () => {
-  // The defining property of completion-based recurrence.
-  assert.equal(dueState(laundry, '2026-08-15', '2026-08-15').nextDueISO, '2026-08-18');
+  // The defining property of completion-based recurrence: the interval runs from
+  // when you actually did it, not from a fixed calendar. Completed 2 days after
+  // the previous due date, so the next one moves out by the same 2 days.
+  // A today-anchored implementation would return '2026-08-20' here.
+  assert.equal(dueState(laundry, '2026-08-15', '2026-08-17').nextDueISO, '2026-08-18');
 });
 
 test('a one-off is due until it is done, then never again', () => {
