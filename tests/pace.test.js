@@ -65,6 +65,18 @@ test('inactive chores are excluded from the target', () => {
   assert.equal(r.empty, true);
 });
 
+test('a malformed recurrence_rule cannot NaN or crash the target', () => {
+  // api_bootstrap_ is supposed to catch these before they ever reach the
+  // ring, but monthTarget does not trust that as its only line of defense —
+  // see lib/pace.js. { } has no intervalDays (NaN); null makes
+  // expectedMonthly's completion branch throw reading .intervalDays off it.
+  const nanRule = { id: 'bx1', active: true, recurrence_type: 'completion', recurrence_rule: {} };
+  const throwingRule = { id: 'bx2', active: true, recurrence_type: 'completion', recurrence_rule: null };
+  const r = ringState([laundry, nanRule, throwingRule], [], [], '2026-08-15');
+  assert.ok(Number.isFinite(r.target));
+  assert.equal(Math.round(r.target * 100) / 100, 10.15); // only laundry counts, never NaN
+});
+
 test('a malformed log entry does not crash the ring', () => {
   const base = log(3);
   const withMalformed = [

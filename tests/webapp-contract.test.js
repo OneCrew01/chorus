@@ -53,16 +53,22 @@ let cached = null;
 function loadHelper() {
   if (cached) return cached;
   const src = readFileSync(WEBAPP_PATH, 'utf8');
-  const fn = extractFunction(src, 'chLogAlreadyRecorded_');
+  const fns = ['chLogAlreadyRecorded_', 'chValidRecurrenceRule_']
+    .map((name) => extractFunction(src, name))
+    .join('\n\n');
   const sandbox = {};
   vm.createContext(sandbox);
-  vm.runInContext(fn, sandbox, { filename: 'ChorusWebApp.gs (extracted helper)' });
+  vm.runInContext(fns, sandbox, { filename: 'ChorusWebApp.gs (extracted helpers)' });
   cached = sandbox;
   return sandbox;
 }
 
 function chLogAlreadyRecorded_(...args) {
   return loadHelper().chLogAlreadyRecorded_(...args);
+}
+
+function chValidRecurrenceRule_(...args) {
+  return loadHelper().chValidRecurrenceRule_(...args);
 }
 
 test('a same-day completion of the same task is already recorded', { skip }, () => {
@@ -99,4 +105,36 @@ test('a second, later tap on the same task the same day is caught by the first e
 
 test('no matching entry returns null, so the caller appends a fresh row', { skip }, () => {
   assert.equal(chLogAlreadyRecorded_([], 't1', '', '2026-08-15'), null);
+});
+
+// chValidRecurrenceRule_ is api_bootstrap_'s shape check (item 5 of the
+// 2026-08-15 fix wave): api_bootstrap_'s JSON.parse catch alone only rejects
+// invalid JSON. A cell holding 5, {}, {"interval":3}, or
+// {"weekdays":"2"} parses fine and reaches dueState/pace.js as garbage that
+// NaNs the ring. These cases mirror the ones named in the fix-wave spec.
+test('completion requires a positive finite intervalDays', { skip }, () => {
+  assert.equal(chValidRecurrenceRule_('completion', { intervalDays: 3 }), true);
+  assert.equal(chValidRecurrenceRule_('completion', {}), false);           // wrong shape, valid JSON
+  assert.equal(chValidRecurrenceRule_('completion', { interval: 3 }), false); // wrong key
+  assert.equal(chValidRecurrenceRule_('completion', { intervalDays: 0 }), false);
+  assert.equal(chValidRecurrenceRule_('completion', { intervalDays: -3 }), false);
+  assert.equal(chValidRecurrenceRule_('completion', { intervalDays: 'three' }), false);
+  assert.equal(chValidRecurrenceRule_('completion', null), false);
+  assert.equal(chValidRecurrenceRule_('completion', 5), false);           // a bare number parses fine
+});
+
+test('schedule requires a non-empty weekdays array or a monthDay in 1..31', { skip }, () => {
+  assert.equal(chValidRecurrenceRule_('schedule', { weekdays: [2] }), true);
+  assert.equal(chValidRecurrenceRule_('schedule', { monthDay: 15 }), true);
+  assert.equal(chValidRecurrenceRule_('schedule', { weekdays: [] }), false);
+  assert.equal(chValidRecurrenceRule_('schedule', { weekdays: '2' }), false); // wrong type
+  assert.equal(chValidRecurrenceRule_('schedule', { monthDay: 0 }), false);
+  assert.equal(chValidRecurrenceRule_('schedule', { monthDay: 32 }), false);
+  assert.equal(chValidRecurrenceRule_('schedule', {}), false);
+  assert.equal(chValidRecurrenceRule_('schedule', null), false);
+});
+
+test('a "none" task carries no rule shape requirement', { skip }, () => {
+  assert.equal(chValidRecurrenceRule_('none', null), true);
+  assert.equal(chValidRecurrenceRule_('none', {}), true);
 });
