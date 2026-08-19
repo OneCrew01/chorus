@@ -34,9 +34,15 @@ function detail(p) {
     <section><h3 class="lab">All steps</h3>
       ${steps.map(s => `<div class="row ${s.done_at ? 'row--done' : ''}">
         <button class="ck ${s.done_at ? 'ck--on' : ''}" data-step="${escAttr(s.id)}"></button>
-        <span class="row__t">${esc(s.seq)}. ${esc(s.title)}</span>
+        <span class="row__t">${esc(s.seq)}. ${esc(s.title)}${s.materials_note ? `<small class="row__mat">${esc(s.materials_note)}</small>` : ''}</span>
         <span class="row__m">${s.done_at ? esc(s.done_at) : (s.planned_month ? 'planned ' + esc(s.planned_month) : 'unplanned')}</span>
-      </div>`).join('')}</section>
+      </div>`).join('')}
+      <form class="stepform">
+        <input name="title" placeholder="Add a step" required>
+        <input name="detail" placeholder="What it involves (optional)">
+        <input name="materials" placeholder="Materials needed (optional)">
+        <button>Add step</button>
+      </form></section>
     <section><h3 class="lab">Notes</h3>
       <form class="noteform"><input name="body" placeholder="Jot something down" required><button>Add</button></form>
       ${notes.map(n => `<p class="note"><b>${esc(n.created_at.slice(0, 10))}</b> ${esc(n.body)}</p>`).join('')}</section>`;
@@ -101,9 +107,10 @@ async function onClick(e) {
 }
 
 async function onSubmit(e) {
-  if (!e.target.classList.contains('noteform')) return;
-  e.preventDefault();
   const form = e.target;
+  if (form.classList.contains('stepform')) { e.preventDefault(); return addStep(form); }
+  if (!form.classList.contains('noteform')) return;
+  e.preventDefault();
   if (form.dataset.busy) return;   // a second submit before the write resolves must not log twice
   const body = form.body.value.trim();
   if (!body) return;
@@ -157,6 +164,51 @@ function downscaleImage(file, maxEdge = PHOTO_MAX_EDGE, quality = 0.85) {
     img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Could not read that photo')); };
     img.src = objectUrl;
   });
+}
+
+// Adding a step to an open project. Same busy-guard and write/reload split
+// as every other write in this file: a step that saved but whose screen
+// failed to refresh must never be reported as "could not add", because that
+// invites the operator to add it a second time.
+async function addStep(form) {
+  if (form.dataset.busy) return;
+  const title = form.title.value.trim();
+  if (!title) return;
+  const projectId = openId();
+  if (!projectId) return;
+  form.dataset.busy = '1';
+
+  // seq drives display order and the "next step" callout. Take the highest
+  // existing seq rather than the count, so adding a step to a project whose
+  // steps were seeded 1..14 continues at 15 instead of colliding.
+  const seq = S.steps
+    .filter(s => s.project_id === projectId)
+    .reduce((max, s) => Math.max(max, Number(s.seq) || 0), 0) + 1;
+
+  try {
+    await run('stepUpsert', {
+      step: {
+        project_id: projectId,
+        seq,
+        title,
+        detail: form.detail.value.trim(),
+        materials_note: form.materials.value.trim(),
+        part_ids: []   // only the seeded pergola steps map to 3D geometry
+      }
+    });
+  } catch {
+    delete form.dataset.busy;
+    toast('Could not add the step', 'bad');
+    return;
+  }
+  form.reset();
+  toast('Step added');
+  try {
+    await refresh();
+  } catch {
+    delete form.dataset.busy;
+    toast('Saved — but the screen could not refresh. Pull to retry.', 'bad');
+  }
 }
 
 // Raw passthrough for formats the browser will not decode into a canvas.

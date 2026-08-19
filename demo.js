@@ -51,6 +51,33 @@ export async function demoRun(method, params, state) {
     if (i >= 0) cache.tasks[i] = t; else cache.tasks.push(t);
     return t;
   }
+  if (method === 'stepUpsert') {
+    const s = params.step;
+    // Mirrors api_stepUpsert_: an id means update, no id means append. Note
+    // part_ids is an ARRAY on the way in and a comma STRING in storage, same
+    // as the real backend — a view that reads it back must see the string
+    // shape here too, or demo mode would quietly diverge from production.
+    if (s.id) {
+      const existing = cache.steps.find(x => x.id === s.id);
+      if (!existing) throw new Error('stepUpsert: no step ' + s.id);
+      existing.title = s.title;
+      existing.detail = s.detail || '';
+      existing.materials_note = s.materials_note || '';
+      existing.seq = s.seq;
+      existing.part_ids = (s.part_ids || []).join(',');
+      return existing;
+    }
+    const created = {
+      id: 's' + Math.random().toString(36).slice(2, 8),
+      project_id: s.project_id, seq: s.seq, title: s.title,
+      detail: s.detail || '', materials_note: s.materials_note || '',
+      planned_month: '', done_at: '', done_by: '',
+      part_ids: (s.part_ids || []).join(',')
+    };
+    cache.steps.push(created);
+    return created;
+  }
+
   if (method === 'stepComplete') {
     const s = cache.steps.find(x => x.id === params.step_id);
     s.done_at = cache.todayISO; s.done_by = params.person_id;

@@ -849,3 +849,44 @@ section {
   border-color: var(--success);
   color: var(--success);
 }
+
+/* Add-a-step form. Stacked rather than inline: three fields side by side on a
+   phone gives each one about 60px, which is unusable. Full-width rows with
+   44px touch targets are the only shape that works one-handed. */
+.stepform {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+}
+
+.stepform input {
+  min-height: var(--touch);
+  padding: 8px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px; /* 16px stops iOS Safari zooming the page on focus */
+}
+
+.stepform button {
+  min-height: var(--touch);
+  border: none;
+  border-radius: 8px;
+  background: var(--accent-warm);
+  color: #1a1119;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Materials shown under the step title, so the list answers "what do I need"
+   without opening anything. */
+.row__mat {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
