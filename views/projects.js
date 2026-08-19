@@ -159,6 +159,18 @@ function downscaleImage(file, maxEdge = PHOTO_MAX_EDGE, quality = 0.85) {
   });
 }
 
+// Raw passthrough for formats the browser will not decode into a canvas.
+// No resizing happens here — that is the trade for supporting HEIC at all.
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(new Error('Could not read that photo'));
+    fr.onabort = () => reject(new Error('Photo read was cancelled'));
+    fr.readAsDataURL(file);
+  });
+}
+
 async function onChange(e) {
   if (e.target.id !== 'shot' || !e.target.files?.length) return;
   const input = e.target;
@@ -179,7 +191,19 @@ async function onChange(e) {
     // not upload the photo" — it uploaded; only the screen didn't refresh to
     // show it.
     try {
-      const dataUrl = await downscaleImage(file);
+      let dataUrl;
+      try {
+        dataUrl = await downscaleImage(file);
+      } catch {
+        // The canvas path needs the BROWSER to decode the image, and most
+        // browsers cannot decode HEIC — which is what an iPhone produces on
+        // default settings, i.e. exactly the photo this feature exists for.
+        // Fall back to shipping the original bytes: larger, and it skips the
+        // downscale, but api_photoAdd_'s 8MB cap still backstops it and a
+        // normal phone photo lands well under that. Better a big upload than
+        // a feature that silently refuses the one camera it was built for.
+        dataUrl = await readFileAsDataUrl(file);
+      }
       await run('photoAdd', { project_id: openId(), dataUrl, caption: '' });
     } catch (err) {
       delete input.dataset.busy;
